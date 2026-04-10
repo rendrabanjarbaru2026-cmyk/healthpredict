@@ -1,0 +1,14 @@
+HealthPredict-Judge.zip
+healthpredict-web.zip
+healthpredictv1-web.zip
+judge.sh
+judge2.sh
+
+healthpredict-web/
+
+scripts/batch_run.py
+scripts/redshift_init.py
+scripts/sagemaker_run.py
+scripts/verify.py
+
+cloudformation/

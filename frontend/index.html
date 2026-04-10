@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthPredict AI — Diabetes Risk Prediction</title>
+<style>
+  :root {
+    --navy: #0C2D5E; --blue: #1A5CA8; --lblue: #D6E8F7;
+    --teal: #0B5F5F; --green: #145C35; --lgreen: #D2EAD9;
+    --orange: #B85C10; --lorange: #FDEACC;
+    --red: #A82020;   --lred: #FDDDDD;
+    --gray: #F1F4F8;  --mgray: #D8DCE2; --dgray: #2C3340;
+    --white: #FFFFFF; --muted: #5A6475;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: var(--gray); color: var(--dgray); }
+
+  /* Header */
+  header { background: var(--navy); color: white; padding: 18px 32px;
+           display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 1.4rem; }
+  header span { font-size: 0.85rem; color: #6BAED4; }
+  .badge { background: var(--blue); color: white; padding: 3px 10px;
+           border-radius: 12px; font-size: 0.75rem; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 8px 20px; border: none; border-radius: 6px 6px 0 0;
+         cursor: pointer; font-size: 0.9rem; background: var(--mgray); color: var(--muted); }
+  .tab.active { background: var(--blue); color: white; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Cards */
+  .card { background: white; border-radius: 8px; padding: 24px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px; }
+  .card h2 { font-size: 1.05rem; color: var(--navy); margin-bottom: 16px;
+             padding-bottom: 8px; border-bottom: 2px solid var(--lblue); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 14px; }
+  .form-group label { display: block; font-size: 0.8rem; color: var(--muted);
+                      margin-bottom: 4px; font-weight: bold; }
+  .form-group input { width: 100%; padding: 8px 10px; border: 1px solid var(--mgray);
+                      border-radius: 5px; font-size: 0.9rem; }
+  .form-group input:focus { outline: none; border-color: var(--blue); }
+  .form-group .hint { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  /* Buttons */
+  .btn { padding: 10px 24px; border: none; border-radius: 6px;
+         cursor: pointer; font-size: 0.9rem; font-weight: bold; }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: var(--navy); }
+  .btn-secondary { background: var(--mgray); color: var(--dgray); }
+  .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+
+  /* Risk Result */
+  .result-box { border-radius: 8px; padding: 20px; margin-top: 16px; display: none; }
+  .result-box.HIGH   { background: var(--lred);    border-left: 5px solid var(--red); }
+  .result-box.MEDIUM { background: var(--lorange);  border-left: 5px solid var(--orange); }
+  .result-box.LOW    { background: var(--lgreen);   border-left: 5px solid var(--green); }
+  .risk-badge { display: inline-block; padding: 4px 14px; border-radius: 12px;
+                font-weight: bold; font-size: 1rem; color: white; }
+  .badge-HIGH   { background: var(--red); }
+  .badge-MEDIUM { background: var(--orange); }
+  .badge-LOW    { background: var(--green); }
+  .score-bar-wrap { background: var(--mgray); border-radius: 4px; height: 8px;
+                    margin: 10px 0; }
+  .score-bar { height: 8px; border-radius: 4px; transition: width .6s; }
+  .score-bar.HIGH   { background: var(--red); }
+  .score-bar.MEDIUM { background: var(--orange); }
+  .score-bar.LOW    { background: var(--green); }
+
+  /* History Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: var(--navy); color: white; padding: 10px 12px; text-align: left; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--mgray); }
+  tr:nth-child(even) td { background: var(--gray); }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 10px;
+          font-size: 0.75rem; font-weight: bold; color: white; }
+  .chip-HIGH   { background: var(--red); }
+  .chip-MEDIUM { background: var(--orange); }
+  .chip-LOW    { background: var(--green); }
+
+  /* Analytics */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 12px; }
+  .stat-card { background: var(--gray); border-radius: 6px; padding: 14px; text-align: center; }
+  .stat-card .value { font-size: 1.6rem; font-weight: bold; color: var(--navy); }
+  .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* Config */
+  .config-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .config-row label { width: 130px; font-size: 0.85rem; color: var(--muted); }
+  .config-row input { flex: 1; padding: 7px 10px; border: 1px solid var(--mgray);
+                      border-radius: 5px; font-size: 0.85rem; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%;
+                background: var(--mgray); display: inline-block; }
+  .status-dot.ok  { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+
+  /* Misc */
+  .loading { color: var(--muted); font-style: italic; font-size: 0.85rem; }
+  .error-msg { color: var(--red); font-size: 0.85rem; padding: 10px; background: var(--lred);
+               border-radius: 5px; margin-top: 10px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏥 HealthPredict AI</h1>
+    <span>Diabetes Risk Prediction — AWS ML Pipeline</span>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+    <span class="status-dot" id="healthDot"></span>
+    <span id="healthLabel" style="font-size:.8rem;color:#9CC4E8;">checking...</span>
+    <span class="badge">SageMaker + Redshift</span>
+  </div>
+</header>
+
+<div class="container">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('predict')">🔍 Predict</button>
+    <button class="tab" onclick="switchTab('history')">📋 History</button>
+    <button class="tab" onclick="switchTab('analytics')">📊 Analytics</button>
+    <button class="tab" onclick="switchTab('settings')">⚙️ Settings</button>
+  </div>
+
+  <!-- PANEL: PREDICT -->
+  <div id="panel-predict" class="panel active">
+    <div class="card">
+      <h2>Patient Clinical Data</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Patient ID *</label>
+          <input id="patient_id" type="text" placeholder="e.g. PAT-001" value="PAT-001">
+        </div>
+        <div class="form-group">
+          <label>Pregnancies</label>
+          <input id="pregnancies" type="number" min="0" max="20" placeholder="0–20" value="2">
+          <div class="hint">Number of pregnancies</div>
+        </div>
+        <div class="form-group">
+          <label>Glucose (mg/dL)</label>
+          <input id="glucose" type="number" placeholder="50–300" value="148">
+          <div class="hint">2-hour plasma glucose</div>
+        </div>
+        <div class="form-group">
+          <label>Blood Pressure (mmHg)</label>
+          <input id="blood_pressure" type="number" placeholder="40–140" value="72">
+          <div class="hint">Diastolic blood pressure</div>
+        </div>
+        <div class="form-group">
+          <label>Skin Thickness (mm)</label>
+          <input id="skin_thickness" type="number" placeholder="5–99" value="35">
+          <div class="hint">Triceps skin fold</div>
+        </div>
+        <div class="form-group">
+          <label>Insulin (μU/mL)</label>
+          <input id="insulin" type="number" placeholder="0–900" value="0">
+          <div class="hint">2-hour serum insulin</div>
+        </div>
+        <div class="form-group">
+          <label>BMI (kg/m²)</label>
+          <input id="bmi" type="number" step="0.1" placeholder="10–70" value="33.6">
+        </div>
+        <div class="form-group">
+          <label>Diabetes Pedigree</label>
+          <input id="diabetes_pedigree" type="number" step="0.001" placeholder="0.0–2.5" value="0.627">
+          <div class="hint">Family history function</div>
+        </div>
+        <div class="form-group">
+          <label>Age (years)</label>
+          <input id="age" type="number" min="1" max="120" placeholder="1–120" value="50">
+        </div>
+      </div>
+      <div style="margin-top:18px; display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="submitPrediction()">▶ Run Prediction</button>
+        <button class="btn btn-secondary" onclick="loadHighRisk()">Load High-Risk Sample</button>
+        <button class="btn btn-secondary" onclick="loadLowRisk()">Load Low-Risk Sample</button>
+      </div>
+      <div id="predict-error" class="error-msg" style="display:none;"></div>
+    </div>
+
+    <div id="result-box" class="result-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:.85rem;color:var(--muted);margin-bottom:4px;">Patient ID</div>
+          <div id="res-patient" style="font-weight:bold;font-size:1rem;"></div>
+        </div>
+        <div>
+          <span id="res-badge" class="risk-badge"></span>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.85rem;color:var(--muted);">Risk Score</div>
+          <div id="res-score" style="font-size:1.6rem;font-weight:bold;"></div>
+        </div>
+      </div>
+      <div class="score-bar-wrap"><div id="res-bar" class="score-bar" style="width:0%"></div></div>
+      <p id="res-rec" style="font-size:.88rem;margin-top:8px;"></p>
+      <div style="margin-top:8px;font-size:.78rem;color:var(--muted);">
+        <span id="res-latency"></span> &nbsp;|&nbsp;
+        <span id="res-model"></span> &nbsp;|&nbsp;
+        <span id="res-time"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: HISTORY -->
+  <div id="panel-history" class="panel">
+    <div class="card">
+      <h2>Prediction History</h2>
+      <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+        <input id="hist-patient" type="text" placeholder="Filter by Patient ID"
+               style="padding:7px 10px;border:1px solid var(--mgray);border-radius:5px;width:200px;">
+        <select id="hist-risk" style="padding:7px 10px;border:1px solid var(--mgray);border-radius:5px;">
+          <option value="">All Risk Levels</option>
+          <option value="HIGH">HIGH</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="LOW">LOW</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadHistory()">Search</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearHistory()">Clear</button>
+      </div>
+      <div id="history-container">
+        <div class="empty">Click Search to load prediction history</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: ANALYTICS -->
+  <div id="panel-analytics" class="panel">
+    <div class="card">
+      <h2>Population Analytics (Redshift)</h2>
+      <button class="btn btn-primary btn-sm" onclick="loadAnalytics()" style="margin-bottom:14px;">
+        🔄 Refresh Analytics
+      </button>
+      <div id="analytics-container">
+        <div class="empty">Click Refresh Analytics to load Redshift data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: SETTINGS -->
+  <div id="panel-settings" class="panel">
+    <div class="card">
+      <h2>API Configuration</h2>
+      <div class="config-row">
+        <label>API Endpoint</label>
+        <input id="cfg-api" type="text" placeholder="https://xxx.execute-api.us-east-1.amazonaws.com/production">
+      </div>
+      <div class="config-row">
+        <label>API Key</label>
+        <input id="cfg-key" type="password" placeholder="Your API Key">
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn btn-primary" onclick="saveConfig()">Save & Test Connection</button>
+        <button class="btn btn-secondary" onclick="clearConfig()">Clear</button>
+      </div>
+      <div id="cfg-status" style="margin-top:12px;font-size:.85rem;"></div>
+    </div>
+
+    <div class="card">
+      <h2>AWS Configuration Notes</h2>
+      <p style="font-size:.85rem;line-height:1.7;color:var(--muted);">
+        This frontend is hosted on <b>AWS Amplify</b>. The API Endpoint and API Key are
+        injected as environment variables (<code>API_ENDPOINT</code>, <code>API_KEY</code>)
+        in the Amplify Console under App settings → Environment variables. Configure
+        those variables in Amplify and redeploy — the values will be used automatically
+        by the build process and embedded in this page's initialization script.
+      </p>
+    </div>
+  </div>
+</div><!-- /container -->
+
+<script>
+// ── Config (injected by Amplify build or set manually) ──────
+let API_ENDPOINT = window.HP_API_ENDPOINT || localStorage.getItem('hp_api') || '';
+let API_KEY      = window.HP_API_KEY      || localStorage.getItem('hp_key') || '';
+
+// Pre-fill settings from stored values
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cfg-api').value = API_ENDPOINT;
+  document.getElementById('cfg-key').value = API_KEY;
+  if (API_ENDPOINT && API_KEY) checkHealth();
+});
+
+// ── Tab switching ────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── Settings ─────────────────────────────────────────────────
+function saveConfig() {
+  API_ENDPOINT = document.getElementById('cfg-api').value.trim().replace(/\/$/, '');
+  API_KEY      = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('hp_api', API_ENDPOINT);
+  localStorage.setItem('hp_key', API_KEY);
+  checkHealth();
+}
+function clearConfig() {
+  localStorage.removeItem('hp_api'); localStorage.removeItem('hp_key');
+  document.getElementById('cfg-api').value = '';
+  document.getElementById('cfg-key').value = '';
+  document.getElementById('cfg-status').textContent = 'Config cleared.';
+}
+
+// ── Health check ─────────────────────────────────────────────
+async function checkHealth() {
+  if (!API_ENDPOINT) return;
+  const dot   = document.getElementById('healthDot');
+  const label = document.getElementById('healthLabel');
+  try {
+    const r   = await fetch(`${API_ENDPOINT}/health`);
+    const d   = await r.json();
+    const ok  = d.status === 'healthy';
+    dot.className   = `status-dot ${ok ? 'ok' : 'err'}`;
+    label.textContent = ok ? 'All systems healthy' : 'Degraded';
+    document.getElementById('cfg-status').innerHTML =
+      `<span style="color:${ok?'var(--green)':'var(--red)'}">` +
+      `${ok ? '✓' : '✗'} ${d.status}</span>`;
+  } catch (e) {
+    dot.className   = 'status-dot err';
+    label.textContent = 'Unreachable';
+    document.getElementById('cfg-status').innerHTML =
+      `<span style="color:var(--red)">✗ Cannot reach API: ${e.message}</span>`;
+  }
+}
+
+// ── Submit prediction ────────────────────────────────────────
+async function submitPrediction() {
+  const errEl = document.getElementById('predict-error');
+  errEl.style.display = 'none';
+
+  if (!API_ENDPOINT || !API_KEY) {
+    errEl.textContent = 'Configure API Endpoint and API Key in the Settings tab first.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const payload = {
+    patient_id:         document.getElementById('patient_id').value,
+    pregnancies:        parseInt(document.getElementById('pregnancies').value),
+    glucose:            parseFloat(document.getElementById('glucose').value),
+    blood_pressure:     parseFloat(document.getElementById('blood_pressure').value),
+    skin_thickness:     parseFloat(document.getElementById('skin_thickness').value),
+    insulin:            parseFloat(document.getElementById('insulin').value),
+    bmi:                parseFloat(document.getElementById('bmi').value),
+    diabetes_pedigree:  parseFloat(document.getElementById('diabetes_pedigree').value),
+    age:                parseInt(document.getElementById('age').value),
+  };
+
+  try {
+    const r = await fetch(`${API_ENDPOINT}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+
+    if (!r.ok) {
+      errEl.textContent = d.error || `HTTP ${r.status}`;
+      errEl.style.display = 'block'; return;
+    }
+
+    showResult(d);
+  } catch (e) {
+    errEl.textContent = `Network error: ${e.message}`;
+    errEl.style.display = 'block';
+  }
+}
+
+function showResult(d) {
+  const box = document.getElementById('result-box');
+  box.className = `result-box ${d.risk_level}`;
+  box.style.display = 'block';
+
+  document.getElementById('res-patient').textContent  = d.patient_id;
+  document.getElementById('res-badge').className      = `risk-badge badge-${d.risk_level}`;
+  document.getElementById('res-badge').textContent    = d.risk_level + ' RISK';
+  document.getElementById('res-score').textContent    = (d.risk_score * 100).toFixed(1) + '%';
+  document.getElementById('res-bar').className        = `score-bar ${d.risk_level}`;
+  document.getElementById('res-bar').style.width      = (d.risk_score * 100) + '%';
+  document.getElementById('res-rec').textContent      = d.recommendation;
+  document.getElementById('res-latency').textContent  = `${d.latency_ms} ms`;
+  document.getElementById('res-model').textContent    = `Model ${d.model_version}`;
+  document.getElementById('res-time').textContent     = new Date(d.prediction_timestamp).toLocaleString();
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── History ──────────────────────────────────────────────────
+async function loadHistory() {
+  const container = document.getElementById('history-container');
+  const pid   = document.getElementById('hist-patient').value.trim();
+  const risk  = document.getElementById('hist-risk').value;
+
+  container.innerHTML = '<div class="loading">Loading from DynamoDB...</div>';
+
+  let url = pid ? `${API_ENDPOINT}/predict/${pid}` : `${API_ENDPOINT}/history`;
+  if (risk && !pid) url += `?risk_level=${risk}&limit=50`;
+
+  try {
+    const r = await fetch(url, { headers: { 'x-api-key': API_KEY } });
+    const d = await r.json();
+    const items = d.predictions || [];
+
+    if (!items.length) {
+      container.innerHTML = '<div class="empty">No predictions found</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">
+        Showing ${items.length} record(s)
+      </p>
+      <div style="overflow-x:auto;">
+      <table>
+        <tr><th>Patient ID</th><th>Timestamp</th><th>Risk Score</th>
+            <th>Risk Level</th><th>Glucose</th><th>BMI</th><th>Age</th></tr>
+        ${items.map(i => `
+        <tr>
+          <td>${i.patient_id}</td>
+          <td>${new Date(i.prediction_timestamp).toLocaleString()}</td>
+          <td>${(parseFloat(i.risk_score)*100).toFixed(1)}%</td>
+          <td><span class="chip chip-${i.risk_level}">${i.risk_level}</span></td>
+          <td>${i.glucose ?? '-'}</td>
+          <td>${i.bmi ?? '-'}</td>
+          <td>${i.age ?? '-'}</td>
+        </tr>`).join('')}
+      </table></div>`;
+  } catch (e) {
+    container.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function clearHistory() {
+  document.getElementById('hist-patient').value = '';
+  document.getElementById('hist-risk').value = '';
+  document.getElementById('history-container').innerHTML =
+    '<div class="empty">Click Search to load prediction history</div>';
+}
+
+// ── Analytics ────────────────────────────────────────────────
+async function loadAnalytics() {
+  const container = document.getElementById('analytics-container');
+  container.innerHTML = '<div class="loading">Querying Redshift analytics...</div>';
+
+  try {
+    const r = await fetch(`${API_ENDPOINT}/history?analytics=true&limit=1`,
+                          { headers: { 'x-api-key': API_KEY } });
+    const d = await r.json();
+    const a = d.analytics || {};
+
+    if (!a.overall_stats) {
+      container.innerHTML =
+        '<div class="empty">No analytics data yet. Make predictions first.</div>';
+      return;
+    }
+
+    const os = a.overall_stats;
+    const rd = a.risk_distribution || [];
+    const trend = a.daily_trend_7d || [];
+
+    container.innerHTML = `
+      <h3 style="font-size:.95rem;color:var(--navy);margin-bottom:12px;">Overall Statistics</h3>
+      <div class="stat-grid" style="margin-bottom:20px;">
+        <div class="stat-card">
+          <div class="value">${os.total_predictions}</div>
+          <div class="label">Total Predictions</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${(os.avg_risk_score*100).toFixed(1)}%</div>
+          <div class="label">Avg Risk Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${os.avg_glucose}</div>
+          <div class="label">Avg Glucose (mg/dL)</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${os.avg_bmi}</div>
+          <div class="label">Avg BMI</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${os.avg_age}</div>
+          <div class="label">Avg Age</div>
+        </div>
+      </div>
+
+      ${rd.length ? `
+      <h3 style="font-size:.95rem;color:var(--navy);margin-bottom:12px;">Risk Distribution</h3>
+      <div style="overflow-x:auto;margin-bottom:20px;">
+      <table>
+        <tr><th>Risk Level</th><th>Count</th><th>Avg Score</th><th>Min</th><th>Max</th></tr>
+        ${rd.map(r => `
+        <tr>
+          <td><span class="chip chip-${r.risk_level}">${r.risk_level}</span></td>
+          <td>${r.total}</td>
+          <td>${(r.avg_score*100).toFixed(1)}%</td>
+          <td>${(r.min_score*100).toFixed(1)}%</td>
+          <td>${(r.max_score*100).toFixed(1)}%</td>
+        </tr>`).join('')}
+      </table></div>` : ''}
+
+      ${trend.length ? `
+      <h3 style="font-size:.95rem;color:var(--navy);margin-bottom:12px;">7-Day Trend</h3>
+      <div style="overflow-x:auto;">
+      <table>
+        <tr><th>Date</th><th>Predictions</th><th>High Risk</th><th>Avg Score</th></tr>
+        ${trend.map(t => `
+        <tr>
+          <td>${t.day}</td>
+          <td>${t.predictions}</td>
+          <td><span class="chip chip-HIGH">${t.high_risk}</span></td>
+          <td>${(t.avg_score*100).toFixed(1)}%</td>
+        </tr>`).join('')}
+      </table></div>` : ''}
+    `;
+  } catch (e) {
+    container.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  }
+}
+
+// ── Sample data loaders ──────────────────────────────────────
+function loadHighRisk() {
+  document.getElementById('patient_id').value       = 'PAT-HIGH-001';
+  document.getElementById('pregnancies').value      = 6;
+  document.getElementById('glucose').value          = 148;
+  document.getElementById('blood_pressure').value   = 72;
+  document.getElementById('skin_thickness').value   = 35;
+  document.getElementById('insulin').value          = 0;
+  document.getElementById('bmi').value              = 33.6;
+  document.getElementById('diabetes_pedigree').value = 0.627;
+  document.getElementById('age').value              = 50;
+}
+
+function loadLowRisk() {
+  document.getElementById('patient_id').value       = 'PAT-LOW-001';
+  document.getElementById('pregnancies').value      = 1;
+  document.getElementById('glucose').value          = 89;
+  document.getElementById('blood_pressure').value   = 66;
+  document.getElementById('skin_thickness').value   = 23;
+  document.getElementById('insulin').value          = 94;
+  document.getElementById('bmi').value              = 28.1;
+  document.getElementById('diabetes_pedigree').value = 0.167;
+  document.getElementById('age').value              = 21;
+}
+</script>
+</body>
+</html>
