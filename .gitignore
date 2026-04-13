@@ -12,3 +12,4 @@ scripts/sagemaker_run.py
 scripts/verify.py
 
 cloudformation/
+token
