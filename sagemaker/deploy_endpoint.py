@@ -19,10 +19,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 # ── CONFIG ──────────────────────────────────────────────────
-STUDENT_NAME   = "yourname"          # ← CHANGE THIS
+STUDENT_NAME   = "Rendra"          # ← CHANGE THIS
 ACCOUNT_ID     = boto3.client("sts").get_caller_identity()["Account"]
 REGION         = "us-east-1"
-ROLE_ARN       = f"arn:aws:iam::{ACCOUNT_ID}:role/LabRole"
+ROLE_ARN       = f"arn:aws:iam::{973364355372}:role/LabRole"
 
 PROJECT        = "healthpredict"
 MODEL_GROUP    = f"{PROJECT}-model-group"
